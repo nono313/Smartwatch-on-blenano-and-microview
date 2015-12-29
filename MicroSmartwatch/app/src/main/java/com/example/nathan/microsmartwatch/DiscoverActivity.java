@@ -1,5 +1,6 @@
 package com.example.nathan.microsmartwatch;
 
+import android.app.Activity;
 import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -11,6 +12,7 @@ import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -18,8 +20,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,8 +70,25 @@ public class DiscoverActivity extends ListActivity{
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
 
+        // Checks if Bluetooth is supported on the device.
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this, R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
 
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // User chose not to enable Bluetooth.
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
+            finish();
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -76,14 +97,30 @@ public class DiscoverActivity extends ListActivity{
 
         // Ensures Bluetooth is available on the device and it is enabled. If not,
         // displays a dialog requesting user permission to enable Bluetooth.
-        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        if (!mBluetoothAdapter.isEnabled()) {
+            if (!mBluetoothAdapter.isEnabled()) {
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            }
         }
+
 
         mLeDeviceListAdapter = new LeDeviceListAdapter();
         setListAdapter(mLeDeviceListAdapter);
-        scanLeDevice(true);
+        if(mBluetoothAdapter.isEnabled()) {
+            scanLeDevice(true);
+        }
+
+        /* For debug purposes, keep screen on */
+        if (BuildConfig.DEBUG) {
+            if (Debug.isDebuggerConnected()) {
+                Log.d("SCREEN", "Keeping screen on for debugging, detach debugger and force an onResume to turn it off.");
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                Log.d("SCREEN", "Keeping screen on for debugging is now deactivated.");
+            }
+        }
     }
 
     /* Generate menu */
@@ -91,11 +128,6 @@ public class DiscoverActivity extends ListActivity{
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
         mOptionsMenu = menu;
-        updateMenu();
-        return true;
-    }
-
-    private void updateMenu() {
         if (!mScanning) {
             mOptionsMenu.findItem(R.id.menu_stop).setVisible(false);
             mOptionsMenu.findItem(R.id.menu_scan).setVisible(true);
@@ -106,6 +138,7 @@ public class DiscoverActivity extends ListActivity{
             mOptionsMenu.findItem(R.id.menu_refresh).setActionView(
                     R.layout.actionbar_indeterminate_progress);
         }
+        return true;
     }
 
     @Override
@@ -119,7 +152,6 @@ public class DiscoverActivity extends ListActivity{
                 scanLeDevice(false);
                 break;
         }
-        updateMenu();
         return true;
     }
 
@@ -143,6 +175,7 @@ public class DiscoverActivity extends ListActivity{
             //mBluetoothAdapter.stopLeScan(mLeScanCallback);
             mBluetoothAdapter.getBluetoothLeScanner().stopScan(mScanCallback);
         }
+        invalidateOptionsMenu();
     }
 
     /* New scancallback for API 21 */

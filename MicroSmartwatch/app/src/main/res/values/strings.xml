@@ -7,4 +7,5 @@
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
     <string name="title_devices">\"BLE Device Scan\"</string>
+    <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
 </resources>
