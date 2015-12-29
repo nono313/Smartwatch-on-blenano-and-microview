@@ -1,13 +1,16 @@
 #include <Time.h>
 #include <MicroView.h>
 #include <Wire.h>
+#include <QueueList.h>
+#include <MemoryFree.h>
 
 
 #define TIME_HEADER  "T"   // Header tag for serial time sync message
 #define TIME_REQUEST  7    // ASCII bell character requests a time sync message 
 //#define TIME_FUNCTION
 
-char message[256] = "Very very very very very very very very very very very very very long string", queue[256];
+char message[256] = "Very very very very very very very very very very very very very long string";
+QueueList<String> queue;
 int strLen = strlen(message);
 bool queueFilled = false;
 
@@ -15,9 +18,11 @@ void setup() {
   pinMode(6, OUTPUT);
   pinMode(5, OUTPUT);
   pinMode(3, OUTPUT);
-  Wire.begin(4);                // join i2c bus with address #4
-  Wire.onReceive(receiveEvent); // register event
   Serial.begin(9600);
+  Wire.begin(0x44>>1);                // join i2c bus with address #4
+  Serial.print("BEGIN\n");
+  Wire.onReceive(receiveEvent); // register event
+
   setSyncProvider(requestSync);  //set function to call when sync required
   uView.begin();
   uView.clear(PAGE);
@@ -93,6 +98,7 @@ ISR(TIMER1_COMPA_vect) {         // timer compare interrupt service routine
 }
 
 void loop() {
+  queueFilled = !queue.isEmpty();
   // If not running, we display the time on the screen
   if (!currentlyRunning) {
 #ifdef TIME_FUNCTION
@@ -111,7 +117,7 @@ void loop() {
     noInterrupts();
     uView.clear(PAGE);
     uView.display();
-    strcpy(message, queue);
+    strcpy(message, queue.pop().c_str());
     //digitalWrite(6,1);
     //      digitalWrite(6,0);
     strLen = strlen(message);
@@ -177,17 +183,28 @@ void receiveEvent(int howMany)
 {
   digitalWrite(3, !digitalRead(3));
   int i = 0;
+  char buffer[256];
   //   Serial.println("!");
   Serial.print("Received ");
   Serial.print(howMany);
   Serial.println(" bytes");
-
   while (0 < Wire.available()) // loop through all but the last
   {
     char c = Wire.read(); // receive byte as a character
-    queue[i++] = c;
+    buffer[i++] = c;
     Serial.print(c);         // print the character
   }
-  //queue[i] = '\0';
-  queueFilled = true;    //Set flag for the main loop to copy from the queue to screen buffer (message)
+  buffer[i] = '\0';
+  //Serial.print(queue.count());
+  //Serial.println(" elements in the queue");
+  if(queue.count() < 10) {
+      queue.push(buffer);
+      queueFilled = true;    //Set flag for the main loop to copy from the queue to screen buffer (message)
+  }
+  else {
+   //    Serial.println("Queue Filled !");
+  }
+  //  Serial.print("freeMemory()=");
+  //Serial.println(freeMemory());
+
 }
