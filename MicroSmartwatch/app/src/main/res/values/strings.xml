@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">MicroSmartwatch</string>
+    <string name="unknown_device">Unknown device !</string>
+
+    <string name="menu_connect">Connect</string>
+    <string name="menu_disconnect">Disconnect</string>
+    <string name="menu_scan">Scan</string>
+    <string name="menu_stop">Stop</string>
+    <string name="title_devices">\"BLE Device Scan\"</string>
+</resources>
