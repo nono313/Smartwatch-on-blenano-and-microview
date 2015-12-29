@@ -33,6 +33,8 @@ public class DiscoverActivity extends ListActivity{
     private boolean mScanning;
     private Handler mHandler;
 
+    private Menu mOptionsMenu;
+
     private ScanFilter bleFilter;
     private ScanSettings settings;
     private List<ScanFilter> filters;
@@ -88,17 +90,22 @@ public class DiscoverActivity extends ListActivity{
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
+        mOptionsMenu = menu;
+        updateMenu();
+        return true;
+    }
+
+    private void updateMenu() {
         if (!mScanning) {
-            menu.findItem(R.id.menu_stop).setVisible(false);
-            menu.findItem(R.id.menu_scan).setVisible(true);
-            menu.findItem(R.id.menu_refresh).setActionView(null);
+            mOptionsMenu.findItem(R.id.menu_stop).setVisible(false);
+            mOptionsMenu.findItem(R.id.menu_scan).setVisible(true);
+            mOptionsMenu.findItem(R.id.menu_refresh).setActionView(null);
         } else {
-            menu.findItem(R.id.menu_stop).setVisible(true);
-            menu.findItem(R.id.menu_scan).setVisible(false);
-            menu.findItem(R.id.menu_refresh).setActionView(
+            mOptionsMenu.findItem(R.id.menu_stop).setVisible(true);
+            mOptionsMenu.findItem(R.id.menu_scan).setVisible(false);
+            mOptionsMenu.findItem(R.id.menu_refresh).setActionView(
                     R.layout.actionbar_indeterminate_progress);
         }
-        return true;
     }
 
     @Override
@@ -112,6 +119,7 @@ public class DiscoverActivity extends ListActivity{
                 scanLeDevice(false);
                 break;
         }
+        updateMenu();
         return true;
     }
 
@@ -135,7 +143,6 @@ public class DiscoverActivity extends ListActivity{
             //mBluetoothAdapter.stopLeScan(mLeScanCallback);
             mBluetoothAdapter.getBluetoothLeScanner().stopScan(mScanCallback);
         }
-
     }
 
     /* New scancallback for API 21 */
