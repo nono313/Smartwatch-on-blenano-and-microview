@@ -187,6 +187,7 @@ public class BluetoothLeService extends Service implements Serializable{
             return false;
         }
 
+
         return true;
     }
 
@@ -210,6 +211,7 @@ public class BluetoothLeService extends Service implements Serializable{
         if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
                 && mBluetoothGatt != null) {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
+
             if (mBluetoothGatt.connect()) {
                 mConnectionState = STATE_CONNECTING;
                 return true;
@@ -227,6 +229,7 @@ public class BluetoothLeService extends Service implements Serializable{
         // parameter to false.
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
         Log.d(TAG, "Trying to create a new connection.");
+
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;
         return true;
@@ -324,12 +327,19 @@ public class BluetoothLeService extends Service implements Serializable{
     }
 
     public boolean sendToWatch(String message) {
+
+        Log.i(TAG, "Request 100 bytes...");
+        Log.i(TAG, mBluetoothGatt.requestMtu(100) + "");
+
         Log.i(TAG, "Sending to watch ?");
         if(watchCharacteristic != null) {
             Log.i(TAG, "Sending " + message + " to the watch!");
             watchCharacteristic.setValue(message);
             return writeCharacteristic(watchCharacteristic);
         }
+
         return false;
     }
+
+
 }

@@ -7,12 +7,14 @@
 
 #define TIME_HEADER  "T"   // Header tag for serial time sync message
 #define TIME_REQUEST  7    // ASCII bell character requests a time sync message 
-//#define TIME_FUNCTION
+#define TIME_FUNCTION
 
 char message[256] = "Very very very very very very very very very very very very very long string";
 QueueList<String> queue;
 int strLen = strlen(message);
 bool queueFilled = false;
+
+bool synced = false;
 
 void setup() {
   pinMode(6, OUTPUT);
@@ -21,7 +23,6 @@ void setup() {
   Serial.begin(9600);
   Wire.begin(0x44>>1);                // join i2c bus with address #4
   Serial.print("BEGIN\n");
-  Wire.onReceive(receiveEvent); // register event
 
   setSyncProvider(requestSync);  //set function to call when sync required
   uView.begin();
@@ -31,13 +32,40 @@ void setup() {
   uView.setCursor(0, 0);
   uView.print("Waiting\nfor sync\nmessage");
   uView.display();
-  while (timeStatus() == timeNotSet) {   //Wait for an initial time sent through the serial port
+  char buffer[50] = {0};
+  //while (timeStatus() == timeNotSet) {   //Wait for an initial time sent through the serial port
+  Wire.onReceive(syncEvent);
 
+  while(synced == false) {
+
+    
+    delay(1000);
+    
+    /*
+    int i = 0;
+     while (0 < Wire.available()) // loop through all but the last
+    {
+      Serial.print(".");
+      char c = Wire.read(); // receive byte as a character
+      buffer[i++] = c;
+    }
+    buffer[i] = '\0';
+    if(i > 0) {
+      Serial.print("Receives sync message !");
+      processSyncString(buffer);
+      synced = true;
+    }
+/*
     if (Serial.available() > 0) {
       processSyncMessage();    // Read the time and set the internal time (see Time lib)
     }
+    //*/
   }
+  Serial.print("End of sync");
 #endif
+
+  Wire.onReceive(receiveEvent); // register event
+
   uView.clear(PAGE);
   uView.display();
   noInterrupts();           // disable all interrupts
@@ -167,6 +195,18 @@ void processSyncMessage() {
   }
 }
 
+void processSyncString(String str) {
+   unsigned long pctime;
+  const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
+  //if (strncmp(TIME_HEADER, str, 1) == 0) {
+    pctime = str.toInt();
+    if ( pctime >= DEFAULT_TIME) { // check the integer is a valid time (greater than Jan 1 2013)
+      setTime(pctime); // Sync Arduino clock to the time received on the serial port
+      adjustTime(3600);    //Add offset for timezone (GMT sent
+    }
+  //}
+}
+
 /* Request a time initialization signal */
 time_t requestSync()
 {
@@ -174,6 +214,26 @@ time_t requestSync()
   return 0; // the time will be sent later in response to serial mesg
 }
 
+void syncEvent(int howMany) {
+  int i = 0;
+  char buffer[256];
+  //   Serial.println("!");
+  Serial.print("Received ");
+  Serial.print(howMany);
+  Serial.println(" bytes");
+  while (0 < Wire.available()) // loop through all but the last
+  {
+    char c = Wire.read(); // receive byte as a character
+    buffer[i++] = c;
+    Serial.print(c);         // print the character
+  }
+  buffer[i] = '\0';
+
+  Serial.println("Sync event");
+  processSyncString(buffer);
+  Serial.println(millis());
+  synced = true;
+}
 
 /*
  * This function executes whenever data is received from master
@@ -195,8 +255,8 @@ void receiveEvent(int howMany)
     Serial.print(c);         // print the character
   }
   buffer[i] = '\0';
-  //Serial.print(queue.count());
-  //Serial.println(" elements in the queue");
+  Serial.print(queue.count());
+  Serial.println(" elements in the queue");
   if(queue.count() < 10) {
       queue.push(buffer);
       queueFilled = true;    //Set flag for the main loop to copy from the queue to screen buffer (message)
