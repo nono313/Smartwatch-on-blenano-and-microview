@@ -1,5 +1,6 @@
 #include "mbed.h"
 #include "BLE.h"
+#include <string>
 //#include "wire.h"
 BLEDevice  ble;
 DigitalOut led1(LED1);
@@ -13,6 +14,9 @@ Ticker ticker;
 #define SCL         P0_8
 #define SDA         P0_10
 #endif
+
+const char headerSms = 'S';
+const char headerTime = 'T';
 
 //TwoWire Wire = TwoWire(NRF_TWI0);
 
@@ -62,7 +66,11 @@ char a='a';
 void writeCharCallback(const GattWriteCallbackParams *params)
 {
     //check to see what characteristic was written, by handle
-
+    char *total;
+    total = (char*)malloc(sizeof(char)*(params->len+1));
+    strcat(total+1, (char*)params->data);
+    total[params->len+1]= '\0';
+    
     if(params->handle == writeChar.getValueHandle()) {
         if(params->len == 1)
             led1 = params->data[0];
@@ -79,16 +87,22 @@ void writeCharCallback(const GattWriteCallbackParams *params)
             //i2c_port.write(addr, &a, 1);
             led1=!led1;
         }
-
+        
         //Update the readChar with the value of writeChar
-        ble.updateCharacteristicValue(readChar.getValueHandle(), params->data, params->len);
-        i2c_port.write(addr, (char*)params->data, params->len);
+        //ble.updateCharacteristicValue(readChar.getValueHandle(), params->data, params->len);
+        //i2c_port.write(addr, (char*)params->data, params->len);
+        total[0] = headerSms;
+
+        ble.updateCharacteristicValue(readChar.getValueHandle(), (const uint8_t *)total, strlen(total)+1);
+        i2c_port.write(addr, total, strlen(total)+1);
     }
     else if(params->handle == timeSyncChar.getValueHandle()) {
-        i2c_port.write(addr, (char*)params->data, params->len);
+        total[0] = headerTime;
+        i2c_port.write(addr, total, strlen(total)+1);
         led1 = !led1;
     }
     //*/
+    free(total);
 }
 
 int main(void)

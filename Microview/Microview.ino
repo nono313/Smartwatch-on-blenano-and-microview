@@ -199,6 +199,9 @@ void processSyncString(String str) {
    unsigned long pctime;
   const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
   //if (strncmp(TIME_HEADER, str, 1) == 0) {
+  Serial.println(str);
+    str.remove(0,1);
+    Serial.println(str);
     pctime = str.toInt();
     if ( pctime >= DEFAULT_TIME) { // check the integer is a valid time (greater than Jan 1 2013)
       setTime(pctime); // Sync Arduino clock to the time received on the serial port
@@ -255,16 +258,22 @@ void receiveEvent(int howMany)
     Serial.print(c);         // print the character
   }
   buffer[i] = '\0';
-  Serial.print(queue.count());
-  Serial.println(" elements in the queue");
-  if(queue.count() < 10) {
-      queue.push(buffer);
-      queueFilled = true;    //Set flag for the main loop to copy from the queue to screen buffer (message)
+  if(buffer[0] == 'T') {
+      processSyncString(buffer);
   }
   else {
-   //    Serial.println("Queue Filled !");
+    memmove(buffer, buffer+1, strlen(buffer));
+    Serial.print(queue.count());
+    Serial.println(" elements in the queue");
+    if(queue.count() < 10) {
+        queue.push(buffer);
+        queueFilled = true;    //Set flag for the main loop to copy from the queue to screen buffer (message)
+    }
+    else {
+     //    Serial.println("Queue Filled !");
+    }
+    //  Serial.print("freeMemory()=");
+    //Serial.println(freeMemory());
   }
-  //  Serial.print("freeMemory()=");
-  //Serial.println(freeMemory());
 
 }
