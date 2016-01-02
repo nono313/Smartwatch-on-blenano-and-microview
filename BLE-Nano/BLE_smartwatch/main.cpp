@@ -26,14 +26,18 @@ uint16_t timeSyncUUID       = 0xA003;
 static const uint16_t uuid16_list[] = {0xFFFF};
 
 //Set up custom characteristics
-static uint8_t readValue[200] = {0};
+static uint8_t readValue[100] = {0};
 ReadOnlyArrayGattCharacteristic<uint8_t, sizeof(readValue)> readChar(readCharUUID, readValue);
 
-static uint8_t writeValue[200] = {0};
+static uint8_t writeValue[100] = {0};
 WriteOnlyArrayGattCharacteristic<uint8_t, sizeof(writeValue)> writeChar(writeCharUUID, writeValue);
 
+static uint8_t timeSyncValue[50] = {0};
+WriteOnlyArrayGattCharacteristic<uint8_t, sizeof(timeSyncValue)> timeSyncChar(timeSyncUUID, timeSyncValue);
+
+
 //Set up custom service
-GattCharacteristic *characteristics[] = {&readChar, &writeChar};
+GattCharacteristic *characteristics[] = {&readChar, &writeChar, &timeSyncChar};
 GattService customService(customServiceUUID, characteristics, sizeof(characteristics)/sizeof(GattCharacteristic *));
 
 
@@ -79,6 +83,10 @@ void writeCharCallback(const GattWriteCallbackParams *params)
         //Update the readChar with the value of writeChar
         ble.updateCharacteristicValue(readChar.getValueHandle(), params->data, params->len);
         i2c_port.write(addr, (char*)params->data, params->len);
+    }
+    else if(params->handle == timeSyncChar.getValueHandle()) {
+        i2c_port.write(addr, (char*)params->data, params->len);
+        led1 = !led1;
     }
     //*/
 }

@@ -18,7 +18,9 @@ import android.widget.ExpandableListView;
 import android.widget.SimpleExpandableListAdapter;
 import android.widget.TextView;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -236,6 +238,13 @@ public class DeviceControlActivity extends Activity{
                     }
                 //*/
 
+                }
+                else if(gattCharacteristic.getUuid().equals(UUID.fromString("0000a003-0000-1000-8000-00805f9b34fb"))) {
+                    Timestamp now = new Timestamp(System.currentTimeMillis());
+                    Log.i(TAG, "Sending timestamp : " + now.getTime()/1000);
+                    gattCharacteristic.setValue("" + (long)(now.getTime()/1000));
+                    mBluetoothLeService.writeCharacteristic(gattCharacteristic);
+                    Log.i(TAG, "End timestamp");
                 }
             }
             mGattCharacteristics.add(charas);

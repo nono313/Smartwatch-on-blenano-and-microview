@@ -328,8 +328,8 @@ public class BluetoothLeService extends Service implements Serializable{
 
     public boolean sendToWatch(String message) {
 
-        Log.i(TAG, "Request 100 bytes...");
-        Log.i(TAG, mBluetoothGatt.requestMtu(100) + "");
+        //Log.i(TAG, "Request 100 bytes...");
+        //Log.i(TAG, mBluetoothGatt.requestMtu(100) + "");
 
         Log.i(TAG, "Sending to watch ?");
         if(watchCharacteristic != null) {
