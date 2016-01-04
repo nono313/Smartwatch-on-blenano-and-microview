@@ -2,10 +2,10 @@
 #include <MicroView.h>
 #include <Wire.h>
 #include <QueueList.h>
-#include <MemoryFree.h>
+//#include <MemoryFree.h> // Search for memory leak
 
 
-#define TIME_HEADER  "T"   // Header tag for serial time sync message
+#define TIME_HEADER  'T'   // Header tag for serial time sync message
 #define TIME_REQUEST  7    // ASCII bell character requests a time sync message 
 #define TIME_FUNCTION
 
@@ -16,15 +16,22 @@ bool queueFilled = false;
 
 bool synced = false;
 
+/**
+ * Init function
+ */
 void setup() {
+  /* Setup GPIO */
   pinMode(6, OUTPUT);
   pinMode(5, OUTPUT);
   pinMode(3, OUTPUT);
+
+  /* Setup communication protocols */
   Serial.begin(9600);
   Wire.begin(0x44>>1);                // join i2c bus with address #4
+  
   Serial.print("BEGIN\n");
 
-  setSyncProvider(requestSync);  //set function to call when sync required
+  /* Clean the screen */
   uView.begin();
   uView.clear(PAGE);
 
@@ -33,57 +40,40 @@ void setup() {
   uView.print("Waiting\nfor sync\nmessage");
   uView.display();
   char buffer[50] = {0};
-  //while (timeStatus() == timeNotSet) {   //Wait for an initial time sent through the serial port
+
+  /* Register callback for i2c sync messages */
   Wire.onReceive(syncEvent);
 
+  /* 
+   * Loop as long as a sync message has not been detected by the 
+   * syncEvent callback.
+   */
   while(synced == false) {
-
-    
     delay(1000);
-    
-    /*
-    int i = 0;
-     while (0 < Wire.available()) // loop through all but the last
-    {
-      Serial.print(".");
-      char c = Wire.read(); // receive byte as a character
-      buffer[i++] = c;
-    }
-    buffer[i] = '\0';
-    if(i > 0) {
-      Serial.print("Receives sync message !");
-      processSyncString(buffer);
-      synced = true;
-    }
-/*
-    if (Serial.available() > 0) {
-      processSyncMessage();    // Read the time and set the internal time (see Time lib)
-    }
-    //*/
   }
-  Serial.print("End of sync");
 #endif
 
-  Wire.onReceive(receiveEvent); // register event
+  /* Register general callback for i2c incomming messages */
+  Wire.onReceive(receiveEvent);
 
+  /* Clear screen */
   uView.clear(PAGE);
   uView.display();
+  
   noInterrupts();           // disable all interrupts
-  TCCR1A = 0;
+  /* Initialise Timer1 registers */
+  TCCR1A = 0;   // Normal mode operation
   TCCR1B = 0;
-  TCNT1  = 0;
+  TCNT1  = 0;   //Timer value
 
-  OCR1A = 200;            // compare match register 16MHz/256/2Hz
-  TCCR1B |= (1 << WGM12);   // CTC mode
+  OCR1A = 200;            // Compare Match register 16MHz/1024 * 200 -> period = 0.0128 s
+  TCCR1B |= (1 << WGM12);   // CTC mode = TOP is OCR1A value, the timer is set to 0 after the threshold is reached
   TCCR1B |= (1 << CS12) | (1 << CS10);    // 1024 prescaler
   TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
-  //  Serial.flush();
-  ///    while (Serial.read() >= 0) { }
   interrupts();
-
 }
 
-// Globals
+/* Globals */
 int j = 0, k;
 int initialCoord = -2000;        // Coordinate (inside or outside the screen) of the first character of the current string
 // Flags
@@ -182,19 +172,6 @@ void digitalClockDisplay() {
   Serial.println();
 }
 
-/* Read the time from the serial port and set the timestamp */
-void processSyncMessage() {
-  unsigned long pctime;
-  const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
-  if (Serial.find(TIME_HEADER)) {
-    pctime = Serial.parseInt();
-    if ( pctime >= DEFAULT_TIME) { // check the integer is a valid time (greater than Jan 1 2013)
-      setTime(pctime); // Sync Arduino clock to the time received on the serial port
-      adjustTime(3600);    //Add offset for timezone (GMT sent
-    }
-  }
-}
-
 void processSyncString(String str) {
    unsigned long pctime;
   const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
@@ -208,13 +185,6 @@ void processSyncString(String str) {
       adjustTime(3600);    //Add offset for timezone (GMT sent
     }
   //}
-}
-
-/* Request a time initialization signal */
-time_t requestSync()
-{
-  Serial.write(TIME_REQUEST);
-  return 0; // the time will be sent later in response to serial mesg
 }
 
 void syncEvent(int howMany) {
@@ -259,7 +229,10 @@ void receiveEvent(int howMany)
   }
   buffer[i] = '\0';
   if(buffer[0] == 'T') {
+#ifdef TIME_FUNCTION
+      digitalWrite(5, !digitalRead(5));
       processSyncString(buffer);
+#endif
   }
   else {
     memmove(buffer, buffer+1, strlen(buffer));
