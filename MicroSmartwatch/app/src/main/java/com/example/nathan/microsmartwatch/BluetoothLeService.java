@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -18,43 +17,52 @@ import android.util.Log;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * Created by nathan on 29/12/15.
+ * BLuetoothLeService
+ * The service manages the direct communication with the BLE radio
+ * (connexion and update of GATT characteristics)
  */
 public class BluetoothLeService extends Service implements Serializable{
-
+    /* Log TAG */
     private final static String TAG = BluetoothLeService.class.getSimpleName();
 
+    /* Bluetooth Low Energy configuration */
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
     private int mConnectionState = STATE_DISCONNECTED;
 
+    /* Constant for bluetooth connection state */
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
 
+    /* Constant for GATT states */
     public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+            "com.example.nathan.microsmartwatch.bluetooth.le.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+            "com.example.nathan.microsmartwatch.bluetooth.le.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
+            "com.example.nathan.microsmartwatch.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+            "com.example.nathan.microsmartwatch.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
+            "com.example.nathan.microsmartwatch.bluetooth.le.EXTRA_DATA";
 
+    /* Local Binder used to communicate with the service */
     private final IBinder mBinder = new LocalBinder();
 
+    /* Characteristic used to transmit text messages to the watch */
     private BluetoothGattCharacteristic watchCharacteristic;
 
-    // Implements callback methods for GATT events that the app cares about.  For example,
-    // connection change and services discovered.
+    /*
+     * Implements callback methods for GATT events that the app cares about.  For example,
+     * connection change and services discovered.
+     */
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
+        /* When a connection state changes */
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             String intentAction;
@@ -63,7 +71,7 @@ public class BluetoothLeService extends Service implements Serializable{
                 mConnectionState = STATE_CONNECTED;
                 broadcastUpdate(intentAction);
                 Log.i(TAG, "Connected to GATT server.");
-                // Attempts to discover services after successful connection.
+                /* Attempts to discover services after successful connection. */
                 Log.i(TAG, "Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
 
@@ -75,6 +83,7 @@ public class BluetoothLeService extends Service implements Serializable{
             }
         }
 
+        /* When a service is discovered by the device */
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -84,6 +93,7 @@ public class BluetoothLeService extends Service implements Serializable{
             }
         }
 
+        /* When a characteristic is read */
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
@@ -93,6 +103,7 @@ public class BluetoothLeService extends Service implements Serializable{
             }
         }
 
+        /* When a characteristic is changed */
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
@@ -100,66 +111,48 @@ public class BluetoothLeService extends Service implements Serializable{
         }
     };
 
-
+    /* Broadcast an intent */
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
         sendBroadcast(intent);
     }
 
-
+    /* When a characteristic is updated with a string value */
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
-
-        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
-        // carried out as per profile specifications:
-        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
-       /*
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            int flag = characteristic.getProperties();
-            int format = -1;
-            if ((flag & 0x01) != 0) {
-                format = BluetoothGattCharacteristic.FORMAT_UINT16;
-                Log.d(TAG, "Heart rate format UINT16.");
-            } else {
-                format = BluetoothGattCharacteristic.FORMAT_UINT8;
-                Log.d(TAG, "Heart rate format UINT8.");
-            }
-            final int heartRate = characteristic.getIntValue(format, 1);
-            Log.d(TAG, String.format("Received heart rate: %d", heartRate));
-            intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
-        } else {
-        //*/
-            // For all other profiles, writes the data formatted in HEX.
-            final byte[] data = characteristic.getValue();
-            if (data != null && data.length > 0) {
-                final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for(byte byteChar : data)
-                    stringBuilder.append(String.format("%02X ", byteChar));
-                intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
-            }
-        //}
+        final byte[] data = characteristic.getValue();
+        if (data != null && data.length > 0) {
+            final StringBuilder stringBuilder = new StringBuilder(data.length);
+            for (byte byteChar : data)
+                stringBuilder.append(String.format("%02X ", byteChar));
+            intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+        }
         sendBroadcast(intent);
     }
 
+    /* Local Binder class */
     public class LocalBinder extends Binder {
         BluetoothLeService getService() {
             return BluetoothLeService.this;
         }
     }
 
-
+    /* When the service is bounded to something */
     @Override
     public IBinder onBind(Intent intent) {
         Log.i(TAG, "BLEService bouned !");
         return mBinder;
     }
 
+    /* When the service is unbounded */
     @Override
     public boolean onUnbind(Intent intent) {
-        // After using a given device, you should make sure that BluetoothGatt.close() is called
-        // such that resources are cleaned up properly.  In this particular example, close() is
-        // invoked when the UI is disconnected from the Service.
+        /*
+         * After using a given device, you should make sure that BluetoothGatt.close() is called
+         * such that resources are cleaned up properly.  In this particular example, close() is
+         * invoked when the UI is disconnected from the Service.
+         */
         close();
         return super.onUnbind(intent);
     }
@@ -171,8 +164,6 @@ public class BluetoothLeService extends Service implements Serializable{
      * @return Return true if the initialization is successful.
      */
     public boolean initialize() {
-        // For API level 18 and above, get a reference to BluetoothAdapter through
-        // BluetoothManager.
         if (mBluetoothManager == null) {
             mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (mBluetoothManager == null) {
@@ -186,7 +177,6 @@ public class BluetoothLeService extends Service implements Serializable{
             Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
             return false;
         }
-
 
         return true;
     }
@@ -225,8 +215,10 @@ public class BluetoothLeService extends Service implements Serializable{
             Log.w(TAG, "Device not found.  Unable to connect.");
             return false;
         }
-        // We want to directly connect to the device, so we are setting the autoConnect
-        // parameter to false.
+        /*
+         * We want to directly connect to the device, so we are setting the autoConnect
+         * parameter to false.
+         */
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
         Log.d(TAG, "Trying to create a new connection.");
 
@@ -297,16 +289,6 @@ public class BluetoothLeService extends Service implements Serializable{
             return;
         }
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-
-        // This is specific to Heart Rate Measurement.
-        /*
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-                    UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            mBluetoothGatt.writeDescriptor(descriptor);
-        }
-        */
     }
 
     /**
@@ -321,25 +303,25 @@ public class BluetoothLeService extends Service implements Serializable{
         return mBluetoothGatt.getServices();
     }
 
-
+    /**
+     * Update the write characteristic that will display text to the Microview's screen
+     */
     public void setWatchCharacteristic(BluetoothGattCharacteristic charac) {
         this.watchCharacteristic = charac;
     }
 
+    /**
+     * Send a string message to the watch for display
+     * @param message : string to display
+     * @return a boolean indicating if the characteristic was updated properly
+     */
     public boolean sendToWatch(String message) {
-
-        //Log.i(TAG, "Request 100 bytes...");
-        //Log.i(TAG, mBluetoothGatt.requestMtu(100) + "");
-
-        Log.i(TAG, "Sending to watch ?");
+        Log.i(TAG, "Try to send to the watch");
         if(watchCharacteristic != null) {
             Log.i(TAG, "Sending " + message + " to the watch!");
             watchCharacteristic.setValue(message);
             return writeCharacteristic(watchCharacteristic);
         }
-
         return false;
     }
-
-
 }

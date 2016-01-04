@@ -9,7 +9,8 @@ import android.os.IBinder;
 import android.util.Log;
 
 /**
- * Created by nathan on 29/12/15.
+ * ForwardService
+ * The service transfers the content of a SMS from the SMSReceiver to the BluetoothLeService.
  */
 public class ForwardService extends Service {
     private final String TAG = ForwardService.class.getSimpleName();
@@ -27,7 +28,6 @@ public class ForwardService extends Service {
 
         if(extras != null) {
             final String message = (String) extras.get("Message");
-            //service = (BluetoothLeService) extras.get("BLEService");
 
             Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
             bindService(gattServiceIntent, new ServiceConnection() {
@@ -42,9 +42,6 @@ public class ForwardService extends Service {
                     else {
                         Log.w(TAG, "Error while sending message !");
                     }
-
-
-
                 }
 
                 @Override
@@ -53,6 +50,8 @@ public class ForwardService extends Service {
                 }
             }, BIND_AUTO_CREATE);
         }
+
+        stopSelf(); // Kill itself
         return 0;
     }
 

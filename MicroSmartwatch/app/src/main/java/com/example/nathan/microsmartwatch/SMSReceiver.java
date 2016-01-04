@@ -29,7 +29,7 @@ public class SMSReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.d("RECEIVER", "Received!");
-        Toast t = Toast.makeText(context, "COUCOU", Toast.LENGTH_SHORT);
+        Toast t = Toast.makeText(context, "Sms reçu", Toast.LENGTH_SHORT);
         t.show();
 
         Log.i(TAG, "Intent recieved: " + intent.getAction());

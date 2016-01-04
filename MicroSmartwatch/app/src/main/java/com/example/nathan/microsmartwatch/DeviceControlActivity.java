@@ -27,9 +27,13 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Created by nathan on 29/12/15.
+ * DeviceCntrolActivity
+ * The activity search the GATT characteristics available on the selected device,
+ * send a timestamp for time synchronisation purposes
+ * and sets the BroadcastReceiver to receive incoming SMS.
  */
 public class DeviceControlActivity extends Activity{
+    /* Log TAG */
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
@@ -38,12 +42,11 @@ public class DeviceControlActivity extends Activity{
     private String mDeviceName;
     private String mDeviceAddress;
 
-
+    /* Bluetooth related */
     private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
             new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
     private boolean mConnected = false;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
-
     private BluetoothLeService mBluetoothLeService;
 
     private final String LIST_NAME = "NAME";
@@ -56,19 +59,21 @@ public class DeviceControlActivity extends Activity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.device_control);
 
+        /* Retrieve device name and address from Extra */
         final Intent intent = getIntent();
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
         mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
 
-        // Sets up UI references.
+        /* Sets up UI references. */
         ((TextView) findViewById(R.id.textView2)).setText(mDeviceAddress);
 
+        /* Display the device name and address on the UI */
         getActionBar().setTitle(mDeviceName);
         getActionBar().setDisplayHomeAsUpEnabled(true);
 
+        /* Bind to the BluetoothLeService */
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-
 
     }
 
@@ -120,7 +125,7 @@ public class DeviceControlActivity extends Activity{
         mBluetoothLeService = null;
     }
 
-    // Code to manage Service lifecycle.
+    /* Code to manage Service lifecycle. */
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
         @Override
@@ -142,12 +147,14 @@ public class DeviceControlActivity extends Activity{
     };
 
 
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-    //                        or notification operations.
+    /*
+     * Handles various events fired by the Service.
+     * ACTION_GATT_CONNECTED: connected to a GATT server.
+     * ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
+     * ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
+     * ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
+     *                        or notification operations.
+     */
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -174,9 +181,11 @@ public class DeviceControlActivity extends Activity{
         Log.i(TAG, "display Data : " + stringExtra);
     }
 
-    // Demonstrates how to iterate through the supported GATT Services/Characteristics.
-    // In this sample, we populate the data structure that is bound to the ExpandableListView
-    // on the UI.
+    /*
+     * Demonstrates how to iterate through the supported GATT Services/Characteristics.
+     * In this sample, we populate the data structure that is bound to the ExpandableListView
+     * on the UI.
+     */
     private void displayGattServices(List<BluetoothGattService> gattServices) {
         if (gattServices == null) return;
         String uuid = null;
