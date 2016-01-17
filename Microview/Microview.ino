@@ -66,10 +66,10 @@ void setup() {
   TCCR1B = 0;
   TCNT1  = 0;   //Timer value
 
-  OCR1A = 200;            // Compare Match register 16MHz/1024 * 200 -> period = 0.0128 s
+  OCR1A = 400;            // Compare Match register 16MHz/1024 * 400 -> period = 0.0256 s
   TCCR1B |= (1 << WGM12);   // CTC mode = TOP is OCR1A value, the timer is set to 0 after the threshold is reached
   TCCR1B |= (1 << CS12) | (1 << CS10);    // 1024 prescaler
-  TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
+  //TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
   interrupts();
 }
 
@@ -77,7 +77,7 @@ void setup() {
 int j = 0, k;
 int initialCoord = -2000;        // Coordinate (inside or outside the screen) of the first character of the current string
 // Flags
-bool lastRound = false;        // Indicates that we want to stop displaying anything after the current string is shown
+bool lastRound = true;        // Indicates that we want to stop displaying anything after the current string is shown
 bool currentlyRunning = false;        // Gives the state of the screen (either displaying a scrolling message or not)
 int nDisplayed = -1;
 
@@ -145,6 +145,9 @@ void loop() {
     if (message[strlen(message) - 1] == '\r') {
       lastRound = false;
       message[strlen(message) - 1] = '\0';
+    }
+    else {
+      lastRound = true;
     }
     TIMSK1 |= (1 << OCIE1A);
     queueFilled = false;
